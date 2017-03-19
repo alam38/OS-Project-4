@@ -8,7 +8,7 @@
 
 int openDisk(char *filename, int nBytes) {
 
-	int diskSize, f;
+	int /*diskSize, */ f;
 	
 	if(nBytes == 0) {
 	        if((f = open(filename, O_RDWR|O_APPEND)) == -1) { //add more error testing with own errno for everything
@@ -19,7 +19,7 @@ int openDisk(char *filename, int nBytes) {
 		return -1;
 	}
 	else {
-		diskSize = nBytes - (nBytes % BLOCKSIZE);
+		//diskSize = nBytes - (nBytes % BLOCKSIZE);
 
 	        if((f = open(filename, O_RDWR|O_CREAT, 0666)) == -1) {
                 	return -2;
