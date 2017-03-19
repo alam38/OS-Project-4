@@ -1,5 +1,5 @@
-#ifndef LIBTINYFS_H
-#define LIBTINYFS_H
+#ifndef LIBDISK_H
+#define LIBDISK_H
 
 #define BLOCKSIZE 256
 

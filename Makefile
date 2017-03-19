@@ -1,2 +1,2 @@
-tinyFSDemo : tinyFSDemo.c libTinyFS.c libTinyFS.h
-	gcc -o tinyFSDemo tinyFSDemo.c
+diskTest : tinyFSDemo.c libDisk.c libDisk.h
+	gcc -o diskTest diskTest.c
