@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <unistd.h>
-#include "libTinyFS.h"
+#include "libDisk.h"
 
 int openDisk(char *filename, int nBytes) {
 
@@ -22,7 +22,7 @@ int openDisk(char *filename, int nBytes) {
 	else {
 		diskSize = nBytes - (nBytes % BLOCKSIZE);
 
-	        if(!(f = open(filename, O_RDWR))) {
+	        if(!(f = open(filename, O_RDWR|O_CREAT))) {
         	        printf("The given file does not exist\n");
                 	exit(-2);
         	}
