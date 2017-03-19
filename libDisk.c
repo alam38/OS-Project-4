@@ -31,8 +31,8 @@ int openDisk(char *filename, int nBytes) {
 
 int readBlock(int disk, int bNum, void *block){
 
-	if(!(lseek(disk, (bNum * BLOCKSIZE), SEEK_SET))) {
-		printf("The given file is not open\n");
+	if((lseek(disk, (bNum * BLOCKSIZE), SEEK_SET)) == -1) {
+		printf("The given file is not open (read)\n");
 		return -3;
 	}
 
@@ -43,8 +43,8 @@ int readBlock(int disk, int bNum, void *block){
 
 int writeBlock(int disk, int bNum, void *block) {
 
-        if(!(lseek(disk, (bNum * BLOCKSIZE), SEEK_SET))) {
-                printf("The given file is not open\n");
+        if((lseek(disk, (bNum * BLOCKSIZE), SEEK_SET)) == -1) {
+                printf("The given file is not open (write)\n");
                 return -3;
         }
 	
