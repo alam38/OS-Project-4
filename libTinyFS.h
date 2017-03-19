@@ -5,8 +5,14 @@
 #define FILESIZE 10240
 #define MAGIC 0x44
 #define MAXFILESYSTEMS 256
+
 #define MAXNAMESIZE 32
 #define MAXFILENAME 9
+
+#define SUPERBLOCK 0x01
+#define INODE 0x02
+#define FILEEXTENT 0x03
+#define FREEBLOCK 0x04
 
 typedef struct {
 	char name[MAXFILENAME];
@@ -40,6 +46,7 @@ int8_t findNextOpen();
 int mountedFS;
 int mountedFSIndex;
 int maxFSIndex;
+int numFiles;
 
 #endif
 

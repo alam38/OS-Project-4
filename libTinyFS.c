@@ -42,7 +42,6 @@ int tfs_mkfs(char *filename, int nBytes) {
 
 void initializeBlocks(int f, int bytes) {
 
-	//printf("initializeBlocks f: %d\n", f);
 	writeSuper(f);	
 	setFreeBlocks(f, bytes);
 
@@ -50,11 +49,9 @@ void initializeBlocks(int f, int bytes) {
 
 void writeSuper(int f) {
 
-	//printf("writeSuper f: %d\n", f);
-
 	char *buffer = (char *)calloc(BLOCKSIZE, 1);
 
-	buffer[0] = 1; //block type
+	buffer[0] = SUPERBLOCK; //block type
 	buffer[1] = MAGIC; // super number integrity flag
 	buffer[2] = 1; // index of root inode
 	buffer[3] = 0; // empty separator
@@ -66,11 +63,10 @@ void writeSuper(int f) {
 
 void setFreeBlocks(int f, int bytes) {
 
-	//printf("setFreeBlocks f: %d\n", f);
 	int x;
 	char *buffer = calloc(1, BLOCKSIZE);
 
-        buffer[0] = 4; // block type
+        buffer[0] = FREEBLOCK; // block type
         buffer[1] = MAGIC; // super number integrity flag
 	buffer[3] = 0; // empty
 
@@ -87,7 +83,7 @@ void setFreeBlocks(int f, int bytes) {
 
 int tfs_mount(char *diskname) {
 
-	void *buffer;
+	void *buffer = calloc(1, BLOCKSIZE);
 
 	int x;
 
@@ -102,15 +98,11 @@ int tfs_mount(char *diskname) {
 		}
 	}
 
-	//fileTable = calloc(sizeof(fileData), ((fsTable[mountedFSIndex]).size/BLOCKSIZE) - 1);
-	printf("mountedFSINDEXSIZE %d\n", (fsTable[mountedFSIndex]).size);
-	x = (fsTable[mountedFSIndex]).size - 1;
-	fileData temp[x];
-	fileTable = temp;
-	printf("x: %d\n", x);
+	fileTable = calloc(sizeof(fileData), (fsTable[mountedFSIndex]).size/BLOCKSIZE - 1);
+
+	numFiles = 0;
 
 	readBlock(mountedFS, 0, buffer);
-	printf("magic num: %c\n", ((char *)buffer)[1]);
 	if ((((char *)buffer)[1]) != MAGIC) {
 		return -4; //error code for improper magic number
 	}
@@ -129,8 +121,7 @@ int tfs_openFile(char *name) {
 	int x;
 
 	char *inBuffer = calloc(1, BLOCKSIZE), *outBuffer = calloc(1, BLOCKSIZE);
-	printf("before for loop%d\n", (fsTable[mountedFSIndex]).size);
-	for (x = 0; x < ((fsTable[mountedFSIndex]).size); x++) {
+	for (x = 0; x < numFiles; x++) {
 		if (strcmp(fileTable[x].name, name) == 0) {
 			if (fileTable[x].open == 0) { //0 = false
 				fileTable[x].open = 1;
@@ -139,22 +130,20 @@ int tfs_openFile(char *name) {
 		}
 	}
 
-	printf("exit loop\n");
 	strcpy(fileTable[x].name, name);
 	fileTable[x].open = 1;
-	printf("before first findNextOpen\n");
 	fileTable[x].inodeIndex = findNextOpen();
-	printf("after first findNextOpen\n");
 	fileTable[x].size = 0;
 
 	readBlock(mountedFS, fileTable[x].inodeIndex, (void *)inBuffer);
 
-	outBuffer[0] = 2;
+	outBuffer[0] = INODE;
 	outBuffer[1] = MAGIC;
 	outBuffer[2] = inBuffer[2]; // outBuffer[4] = 0 this is our size
 	strcpy(&outBuffer[5], name); 
 
 	writeBlock(mountedFS, fileTable[x].inodeIndex, (void *)outBuffer);
+	numFiles++;
 
 	return fileTable[x].inodeIndex;
 }
@@ -162,17 +151,16 @@ int tfs_openFile(char *name) {
 int8_t findNextOpen() {
 
 	int8_t previousIndex;
-	int8_t *buffer;
+	int8_t *buffer = (int8_t *)calloc(1, BLOCKSIZE);
 
 	if (mountedFS == -1) {
 		return -5; //there is no mounted fs
 	}
 
 	readBlock(mountedFS, 0, (void *)buffer); //reading in the super block
-	printf("super block %c\n", buffer[0]);
 	previousIndex = buffer[2];
 
-	while (buffer[2] != -1 || buffer[0] != 4) {
+	while (buffer[2] != -1 && buffer[0] != FREEBLOCK) {
 		previousIndex = buffer[2];
 		readBlock(mountedFS,buffer[2], buffer); // the issue seems to be tied to initializing of the super block and free blocks
 	}
