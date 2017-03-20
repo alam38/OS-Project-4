@@ -43,6 +43,7 @@ void setFreeBlocks(int f, int bytes);
 
 int8_t findNextInode();
 void moveFreeHead();
+int8_t findPreviousInodeFD(int FD);
 
 int mountedFS;
 int mountedFSIndex;
