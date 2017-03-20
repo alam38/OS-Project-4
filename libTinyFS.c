@@ -55,7 +55,7 @@ void writeSuper(int f) {
 	buffer[1] = MAGIC; // super number integrity flag
 	buffer[2] = 1; // index of root inode
 	buffer[3] = 0; // empty separator
-	buffer[4] = 1; // index of free block head
+	buffer[4] = 2; // index of free block head
 
 	buffer = (void *)buffer;
 	writeBlock(f, 0, buffer);
@@ -113,8 +113,14 @@ int tfs_mount(char *diskname) {
 int tfs_unmount(void) {
 
 	close(mountedFS);
+
+	if (mountedFSIndex == -1) {
+		return -9; // no mounted fs
+	}
+
 	mountedFSIndex = -1;
 
+	return 1;
 }
 
 int tfs_openFile(char *name) {
@@ -132,23 +138,50 @@ int tfs_openFile(char *name) {
 
 	strcpy(fileTable[x].name, name);
 	fileTable[x].open = 1;
-	fileTable[x].inodeIndex = findNextOpen();
+	fileTable[x].inodeIndex = findNextInode();
 	fileTable[x].size = 0;
 
 	readBlock(mountedFS, fileTable[x].inodeIndex, (void *)inBuffer);
 
 	outBuffer[0] = INODE;
 	outBuffer[1] = MAGIC;
-	outBuffer[2] = inBuffer[2]; // outBuffer[4] = 0 this is our size
-	strcpy(&outBuffer[5], name); 
+	outBuffer[2] = findNextInode(); //this finds the next free inode
+	// outBuffer[4] = 0 this is our size
+	strcpy(&outBuffer[5], name); // spot[5] is always our name
 
 	writeBlock(mountedFS, fileTable[x].inodeIndex, (void *)outBuffer);
 	numFiles++;
 
+	moveFreeHead(); //moves the head of the free blocks, need to do this everytime a block is converted from free
+
 	return fileTable[x].inodeIndex;
 }
 
-int8_t findNextOpen() {
+void moveFreeHead() {
+
+	int8_t previousIndex;
+
+	int8_t *inBuffer = calloc(1, BLOCKSIZE), *outBuffer = calloc(1, BLOCKSIZE);
+
+	readBlock(mountedFS, 0, inBuffer);
+
+	outBuffer[0] = inBuffer[0];
+	outBuffer[1] = inBuffer[1];
+	outBuffer[2] = inBuffer[2];
+	outBuffer[3] = inBuffer[3];
+	outBuffer[4] = inBuffer[4];
+
+        while (inBuffer[4] != -1 && inBuffer[0] != FREEBLOCK) {
+                previousIndex = inBuffer[4];
+                readBlock(mountedFS, inBuffer[4], (void *)inBuffer); 
+        }
+
+	outBuffer[4] = previousIndex;
+
+	writeBlock(mountedFS, 0, (void *)outBuffer);
+}
+
+int8_t findNextInode() {
 
 	int8_t previousIndex;
 	int8_t *buffer = (int8_t *)calloc(1, BLOCKSIZE);
@@ -158,11 +191,10 @@ int8_t findNextOpen() {
 	}
 
 	readBlock(mountedFS, 0, (void *)buffer); //reading in the super block
-	previousIndex = buffer[2];
 
 	while (buffer[2] != -1 && buffer[0] != FREEBLOCK) {
 		previousIndex = buffer[2];
-		readBlock(mountedFS,buffer[2], buffer); // the issue seems to be tied to initializing of the super block and free blocks
+		readBlock(mountedFS,buffer[2], buffer); 
 	}
 
 	if (buffer[2] == -1) {
@@ -173,6 +205,8 @@ int8_t findNextOpen() {
 }
 
 /*int tfs_closeFile(int FD) {
+
+	
 
 }
 
