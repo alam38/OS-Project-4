@@ -141,6 +141,7 @@ int tfs_openFile(char *name) {
 	fileTable[x].open = 1;
 	fileTable[x].inodeIndex = findNextInode();
 	fileTable[x].size = 0;
+	fileTable[x].seekVal = 0;
 
 	readBlock(mountedFS, fileTable[x].inodeIndex, inBuffer);
 
@@ -476,13 +477,37 @@ int tfs_deleteFile(int FD) {
 	return 1;
 }
 
-/*
 int tfs_readByte(int FD, char *buffer) {
+	int ndx, dataNdx;
+	int8_t * dataBuffer;
 
+	if (fileTable[FD].seekVal >= fileTable[FD].size) {
+		printf("SeekVal Already at the end of file...\n");
+	}
+
+	dataBuffer = calloc(1, BLOCKSIZE);
+
+	readBlock(mountedFS, 0, dataBuffer);
+
+	for (ndx = 0; ndx < fileTable[FD].inodeIndex; ndx++) {
+		readBlock(mountedFS, dataBuffer[2], buffer);
+	}
+
+	dataNdx = fileTable[FD].seekVal / 252;
+
+	readBlock(mountedFS, dataBuffer[5], dataBuffer);
+	for (ndx = 0; ndx < dataNdx; ndx++) {
+		readBlock(mountedFS, dataBuffer[2], dataBuffer);
+	}
+
+	memcpy(buffer, dataBuffer + (fileTable[FD].seekVal++ % 252) + 4, 1);
+	return 1;
 }
-
+/* change the file pointer location to offset (absolute). Returns
+success/error codes.*/
 int tfs_seek(int FD, int offset) {
-
-}*/
+	fileTable[FD].seekVal = offset;
+	return 1;
+}
 
 
