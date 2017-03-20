@@ -41,7 +41,8 @@ void initializeBlocks(int f, int bytes);
 void writeSuper(int f);
 void setFreeBlocks(int f, int bytes);
 
-int8_t findNextOpen();
+int8_t findNextInode();
+void moveFreeHead();
 
 int mountedFS;
 int mountedFSIndex;
