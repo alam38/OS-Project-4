@@ -6,7 +6,10 @@ int main(int argc, char *argv[]) {
 
 	char *name = "poop";
 
+	int val;
+
 	printf("tfs_mkfs returned: %d\n", tfs_mkfs(name, FILESIZE));
 	printf("tfs_mount returned: %d\n", tfs_mount(name));
-	printf("tfs_openFile returned: %d\n", tfs_openFile("test"));
+	printf("tfs_openFile returned: %d\n", val = tfs_openFile("test"));
+	printf("tfs_closeFile returned: %d\n", tfs_closeFile(val));
 }
