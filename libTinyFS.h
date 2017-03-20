@@ -47,6 +47,7 @@ int8_t findPreviousInodeFD(int FD);
 void cleanFileExtents(int8_t *buffer);
 
 int freeBlocksTailFD();
+int numFreeBlocks();
 
 int mountedFS;
 int mountedFSIndex;

@@ -148,7 +148,7 @@ int tfs_openFile(char *name) {
 	outBuffer[1] = MAGIC;
 	outBuffer[2] = findNextInode(); //this finds the next free inode
 	// outBuffer[4] = 0 this is our size
-	strcpy(&outBuffer[5], name); // spot[5] is always our name
+	strcpy(&outBuffer[6], name); // spot[6] is always our name
 
 	writeBlock(mountedFS, fileTable[x].inodeIndex, (void *)outBuffer);
 	numFiles++;
@@ -328,64 +328,124 @@ int8_t findPreviousInodeFD(int FD) {
 }
 
 
-/*int tfs_writeFile(int FD,char *buffer, int size) {
-=======
+
 
 /* Writes buffer ‘buffer’ of size ‘size’, which represents an entire
 file’s content, to the file system. Previous content (if any) will be
 completely lost. Sets the file pointer to 0 (the start of file) when
 done. Returns success/error codes. */
 int tfs_writeFile(int FD,char *buffer, int size) {
-	int blocksNeeded, inodeIndex, ndx;
-	int8_t * inBuffer, * outBuffer;
+	int blocksNeeded, ndx, lastBlockSize, currentDataBlock, fdExists = 0,
+	 totalFreeBlocks, totalBlocksNeeded, currentFileSizeInBlocks;
+	int8_t * inBuffer, * outBuffer, inodeIndex, firstDataIndex;
+
+	for(ndx = 0; ndx < numFiles; ndx++) {
+		if (fileTable[ndx].inodeIndex == FD) {
+			fdExists = 1;
+			break;
+		}
+	}
+	if (fdExists == 0) {
+		printf("FD does not exist\n");
+		return -1;
+	}
 
 	inBuffer = calloc(1,BLOCKSIZE);
 	outBuffer = calloc(1,BLOCKSIZE);
 
 	blocksNeeded = size/BLOCKSIZE;
+	lastBlockSize = size % BLOCKSIZE;
+
+	totalFreeBlocks = numFreeBlocks();
+
+	if (lastBlockSize > 0) {
+		totalBlocksNeeded = blocksNeeded + 1;
+	} else {
+		totalBlocksNeeded = blocksNeeded;
+	}
+
+	if (fileTable[ndx].size % 252 > 0) {
+		currentFileSizeInBlocks = (fileTable[ndx].size /BLOCKSIZE) + 1;
+	} else {
+		currentFileSizeInBlocks = fileTable[ndx].size / BLOCKSIZE;
+	}
+
+	if (totalBlocksNeeded > currentFileSizeInBlocks) {
+		if (totalBlocksNeeded > currentFileSizeInBlocks + totalFreeBlocks) {
+			printf("Not enough space to write the file...\n");
+			return -1;
+		}
+	}
+
+	/*totalBlocks = fsTable[mountedFSIndex].size/BLOCKSIZE;
+	totalFreeBlocks = totalBlocks - ;*/
+
 	inodeIndex = findPreviousInodeFD(FD);
 	readBlock(mountedFS, inodeIndex, (void *)inBuffer);
 
-	inodeIndex = (int)inBuffer[2];
+	inodeIndex = (int8_t)inBuffer[2];
 
-	readBlock
+	readBlock(mountedFS, inodeIndex, (void *)inBuffer);
 
-	outBuffer[0] = 2;
-	outBuffer[1] = MAGIC;
-	outBuffer[2] = findNextInode();
-	outBuffer[4] = size;
-	strcpy(&outBuffer[5], filetTable[FD].name);
-	outBuffer[6] = 
+	firstDataIndex = inBuffer[6];
 
+	if (inBuffer[4] != 0) {// If there is data already in the inode
+		outBuffer[0] = 2;
+		outBuffer[1] = MAGIC;
+		outBuffer[2] = findNextInode();
+		outBuffer[4] = size;
+		strcpy((char *)&(outBuffer[6]), fileTable[FD].name);
+		outBuffer[5] = firstDataIndex;
 
+	} else { //If there is not data already in inode
+		outBuffer[0] = 2;
+		outBuffer[1] = MAGIC;
+		outBuffer[2] = findNextInode();
+		outBuffer[4] = size;
+		strcpy((char *)&(outBuffer[6]), fileTable[FD].name);
 
+		readBlock(mountedFS, 0, inBuffer);
+		outBuffer[5] = inBuffer[4];
+	}
 
+	writeBlock(mountedFS, inodeIndex, (void *) outBuffer);
 
+	ndx = 0;
+	readBlock(mountedFS, outBuffer[5], (void *) inBuffer);
 
-	/*int freeBlocksNeeded, totalBlocks, totalFreeBlocks;
-	int8_t * inodeBuffer, * inBuffer;
+	currentDataBlock = outBuffer[5];
 
-	freeBlocksNeeded = size/BLOCKSIZE + 1;
-	totalBlocks = fsTable[mountedFSIndex].size/BLOCKSIZE;
-	totalFreeBlocks = totalBlocks - (maxFSIndex + 1);
+	while(ndx < blocksNeeded) {
+		memcpy(&(inBuffer[4]), buffer + (ndx * 252), 252);
+		writeBlock(mountedFS, currentDataBlock, (void *) inBuffer);
+		currentDataBlock = inBuffer[2];
+		readBlock(mountedFS, inBuffer[2], ((void*)inBuffer));
+		ndx++;
+	}
 
-	if (totalFreeBlocks < freeBlocksNeeded) {
-		printf("Not enough free blocks to write file. %d blocks needed, %d available\n",freeBlocksNeeded, totalFreeBlocks );
-		return -1;
-	} else {
+	if (lastBlockSize > 0) {
+		memcpy(&(inBuffer[4]), buffer + (ndx * 252), lastBlockSize);
+		writeBlock(mountedFS, currentDataBlock, (void *) inBuffer);
+	}
+	return 1;
+}
 
-		readBlock(mountedFS, 0, (void *)inBuffer);
-		while (inBuffer[0] != FREEBLOCK) {
+int numFreeBlocks() {
+	int totalBlocks, usedBlocks, ndx, blocksForFile;
 
+	totalBlocks = fsTable[mountedFSIndex].size / BLOCKSIZE;
+	usedBlocks = 1; //Starting with superblock
+
+	for (ndx = 0; ndx < numFiles; ndx++) {
+		blocksForFile = fileTable[ndx].size/252;
+		if ((fileTable[ndx].size % 252) != 0) {
+			blocksForFile++;
 		}
+		blocksForFile++; //For inode 
+		usedBlocks += blocksForFile;
+	}
 
-		inodeBuffer = calloc(1,BLOCKSIZE);
-		inodeBuffer[0] = 2;
-		inodeBuffer[1] = 0x44;
-		inodeBuffer[2] = 
-	}*/
-
-
+	return totalBlocks - usedBlocks;
 }
 
 /*int tfs_deleteFile(int FD) {
