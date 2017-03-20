@@ -204,13 +204,73 @@ int8_t findNextInode() {
 	return previousIndex;
 }
 
+//commenting this out so you can work on your stuff
+
 /*int tfs_closeFile(int FD) {
+
+	int8_t *inBuffer = calloc(1, BLOCKSIZE), *outBuffer = calloc(1, BLOCKSIZE);
+
+	int8_t previousFD;
+
+	int flag = 0, x;
+
+	for (x = 0; x < numFiles; x++) {
+		if (filetable[x].inodeIndex == FD) {
+			flag = 1;
+		}
+	}
+
+        if (flag == 0) {
+                return -9; //the given file descriptor does not point to an open file
+        }
+
+	if (fileTable[x].open == 0) {
+		return -11; //the file is not open
+	}
+
+	readBlock(mountedFS, FD, (void *)inBuffer);
+
+	previousFD = findPreviousInodeFD();
+	readBlock(mountedFS, previousFD, (void *)outBuffer);
+	outBuffer[2] = inBuffer[2];
+	writeBlock(mountedFS, previousFD, (void *)outBuffer);
 
 	
 
+
+	numFiles--;
+}*/
+
+int8_t findPreviousInodeFD(int FD) {
+
+	int8_t *inBuffer = calloc(1, BLOCKSIZE);
+	int8_t index = 0;
+
+	int flag = 0;
+
+        readBlock(mountedFS, 0, (void *)inBuffer);
+
+
+        while (inBuffer[2] != -1 && inBuffer[0] != FREEBLOCK) {
+                if (inBuffer[2] == FD) {
+                        flag = 1;
+                        break;
+                }
+		index = inBuffer[2];
+                readBlock(mountedFS, inBuffer[2], (void *)inBuffer);
+        }
+
+        if (flag == 1) {
+		return index;
+        }
+	else {
+		return -7; // some error
+	}
+
+
 }
 
-int tfs_writeFile(int FD,char *buffer, int size) {
+/*int tfs_writeFile(int FD,char *buffer, int size) {
 
 }
 
