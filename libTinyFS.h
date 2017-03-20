@@ -15,10 +15,11 @@
 #define FREEBLOCK 0x04
 
 typedef struct {
-	char name[MAXFILENAME];
+	char name[MAXFILENAME];	
 	int8_t inodeIndex; //index in the inodes linked list||this is also our implemented file descriptor
 	int open; //flag to determine if the file is open or not
 	int size;
+	int seekVal;
 } fileData;
 
 typedef struct {
