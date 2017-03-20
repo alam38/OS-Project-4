@@ -44,6 +44,9 @@ void setFreeBlocks(int f, int bytes);
 int8_t findNextInode();
 void moveFreeHead();
 int8_t findPreviousInodeFD(int FD);
+void cleanFileExtents(int8_t *buffer);
+
+int freeBlocksTailFD();
 
 int mountedFS;
 int mountedFSIndex;
