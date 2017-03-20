@@ -48,6 +48,7 @@ void cleanFileExtents(int8_t *buffer);
 
 int freeBlocksTailFD();
 int numFreeBlocks();
+int tfs_deleteFile(int FD);
 
 int mountedFS;
 int mountedFSIndex;

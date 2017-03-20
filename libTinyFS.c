@@ -29,7 +29,7 @@ int tfs_mkfs(char *filename, int nBytes) {
 
 	maxFSIndex++;
 
-	return 1; //1 = succes code
+	return 1; //1 = success code
 }
 
 /*void zeroOut(int f, int bytes) {
@@ -102,7 +102,7 @@ int tfs_mount(char *diskname) {
 
 	numFiles = 0;
 
-	readBlock(mountedFS, 0, buffer);
+	readBlock(mountedFS, 0, (int8_t *)buffer);
 	if ((((char *)buffer)[1]) != MAGIC) {
 		return -4; //error code for improper magic number
 	}
@@ -142,7 +142,7 @@ int tfs_openFile(char *name) {
 	fileTable[x].inodeIndex = findNextInode();
 	fileTable[x].size = 0;
 
-	readBlock(mountedFS, fileTable[x].inodeIndex, (void *)inBuffer);
+	readBlock(mountedFS, fileTable[x].inodeIndex, inBuffer);
 
 	outBuffer[0] = INODE;
 	outBuffer[1] = MAGIC;
@@ -150,8 +150,10 @@ int tfs_openFile(char *name) {
 	// outBuffer[4] = 0 this is our size
 	strcpy(&outBuffer[6], name); // spot[6] is always our name
 
-	writeBlock(mountedFS, fileTable[x].inodeIndex, (void *)outBuffer);
+	writeBlock(mountedFS, fileTable[x].inodeIndex, outBuffer);
 	numFiles++;
+
+	readBlock(mountedFS, fileTable[x].inodeIndex, outBuffer);
 
 	moveFreeHead(); //moves the head of the free blocks, need to do this everytime a block is converted from free
 
@@ -174,12 +176,12 @@ void moveFreeHead() {
 
         while (inBuffer[4] != -1 && inBuffer[0] != FREEBLOCK) {
                 previousIndex = inBuffer[4];
-                readBlock(mountedFS, inBuffer[4], (void *)inBuffer); 
+                readBlock(mountedFS, inBuffer[4], inBuffer); 
         }
 
 	outBuffer[4] = previousIndex;
 
-	writeBlock(mountedFS, 0, (void *)outBuffer);
+	writeBlock(mountedFS, 0, outBuffer);
 }
 
 int8_t findNextInode() {
@@ -191,7 +193,7 @@ int8_t findNextInode() {
 		return -5; //there is no mounted fs
 	}
 
-	readBlock(mountedFS, 0, (void *)buffer); //reading in the super block
+	readBlock(mountedFS, 0, buffer); //reading in the super block
 
 	while (buffer[2] != -1 && buffer[0] != FREEBLOCK) {
 		previousIndex = buffer[2];
@@ -229,19 +231,19 @@ int tfs_closeFile(int FD) {
 		return -11; //the file is not open
 	}
 
-	readBlock(mountedFS, FD, (void *)inBuffer);
+	readBlock(mountedFS, FD, inBuffer);
 
 	previousFD = findPreviousInodeFD(FD);
-	readBlock(mountedFS, previousFD, (void *)outBuffer);
+	readBlock(mountedFS, previousFD, outBuffer);
 	outBuffer[2] = inBuffer[2];
-	writeBlock(mountedFS, previousFD, (void *)outBuffer);
+	writeBlock(mountedFS, previousFD, outBuffer);
 
         inBuffer[0] = FREEBLOCK;
 	inBuffer[2] = inBuffer[6]; //this makes the inode point to its data extents which will turn into free blocks
 	cleanFileExtents(inBuffer);
 
 	end = freeBlocksTailFD();
-	readBlock(mountedFS, end, (void *)endBuffer);
+	readBlock(mountedFS, end, endBuffer);
 	endBuffer[2] = FD;
 
 	fileTable[index].inodeIndex = 0;
@@ -259,14 +261,14 @@ int freeBlocksTailFD() {
         int8_t *outBuffer = calloc(1, BLOCKSIZE);
 	int8_t address, previous;
 
-	readBlock(mountedFS, 0, (void *)outBuffer);
+	readBlock(mountedFS, 0, outBuffer);
 
 	address = outBuffer[4];
 	previous = address;
 
 	while (address != -1) {
 		previous = address;
-		readBlock(mountedFS, address, (void *)outBuffer);
+		readBlock(mountedFS, address, outBuffer);
 		address = outBuffer[2];
 	}
 
@@ -305,7 +307,7 @@ int8_t findPreviousInodeFD(int FD) {
 
 	int flag = 0;
 
-        readBlock(mountedFS, 0, (void *)inBuffer);
+        readBlock(mountedFS, 0, inBuffer);
 
 
         while (inBuffer[2] != -1 && inBuffer[0] != FREEBLOCK) {
@@ -314,7 +316,7 @@ int8_t findPreviousInodeFD(int FD) {
                         break;
                 }
 		index = inBuffer[2];
-                readBlock(mountedFS, inBuffer[2], (void *)inBuffer);
+                readBlock(mountedFS, inBuffer[2], inBuffer);
         }
 
         if (flag == 1) {
@@ -381,11 +383,11 @@ int tfs_writeFile(int FD,char *buffer, int size) {
 	totalFreeBlocks = totalBlocks - ;*/
 
 	inodeIndex = findPreviousInodeFD(FD);
-	readBlock(mountedFS, inodeIndex, (void *)inBuffer);
+	readBlock(mountedFS, inodeIndex, inBuffer);
 
 	inodeIndex = (int8_t)inBuffer[2];
 
-	readBlock(mountedFS, inodeIndex, (void *)inBuffer);
+	readBlock(mountedFS, inodeIndex, inBuffer);
 
 	firstDataIndex = inBuffer[6];
 
@@ -408,24 +410,24 @@ int tfs_writeFile(int FD,char *buffer, int size) {
 		outBuffer[5] = inBuffer[4];
 	}
 
-	writeBlock(mountedFS, inodeIndex, (void *) outBuffer);
+	writeBlock(mountedFS, inodeIndex, outBuffer);
 
 	ndx = 0;
-	readBlock(mountedFS, outBuffer[5], (void *) inBuffer);
+	readBlock(mountedFS, outBuffer[5], inBuffer);
 
 	currentDataBlock = outBuffer[5];
 
 	while(ndx < blocksNeeded) {
 		memcpy(&(inBuffer[4]), buffer + (ndx * 252), 252);
-		writeBlock(mountedFS, currentDataBlock, (void *) inBuffer);
+		writeBlock(mountedFS, currentDataBlock, inBuffer);
 		currentDataBlock = inBuffer[2];
-		readBlock(mountedFS, inBuffer[2], ((void*)inBuffer));
+		readBlock(mountedFS, inBuffer[2], (inBuffer));
 		ndx++;
 	}
 
 	if (lastBlockSize > 0) {
 		memcpy(&(inBuffer[4]), buffer + (ndx * 252), lastBlockSize);
-		writeBlock(mountedFS, currentDataBlock, (void *) inBuffer);
+		writeBlock(mountedFS, currentDataBlock, inBuffer);
 	}
 	return 1;
 }
@@ -448,10 +450,33 @@ int numFreeBlocks() {
 	return totalBlocks - usedBlocks;
 }
 
-/*int tfs_deleteFile(int FD) {
+int tfs_deleteFile(int FD) {
 
+	int8_t *buffer = calloc(1, BLOCKSIZE);
+
+	int x, flag = 0, previous;
+
+	for (x = 0; x < numFiles; x++) {
+		if (fileTable[x].inodeIndex == FD) {
+			flag = 1;
+			break;
+		}
+	}
+
+	if (flag == 0) {
+		return -3; //not a file
+	}
+
+	previous = findPreviousInodeFD(FD);
+	readBlock(mountedFS, previous, buffer);
+
+	readBlock(mountedFS, buffer[2], buffer);
+
+	cleanFileExtents(buffer);
+	return 1;
 }
 
+/*
 int tfs_readByte(int FD, char *buffer) {
 
 }

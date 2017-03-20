@@ -16,4 +16,7 @@ int main(int argc, char *argv[]) {
 	printf("tfs_openFile returned: %d\n", val = tfs_openFile("test"));
 	printf("tfs_writeFile returned: %d\n", val = tfs_writeFile(val,name, strlen(name)));
 	printf("tfs_closeFile returned: %d\n", tfs_closeFile(val));
+
+        printf("tfs_openFile returned: %d\n", val = tfs_openFile("test"));
+        printf("tfs_deleteFile returned: %d\n", val = tfs_deleteFile(val));
 }
