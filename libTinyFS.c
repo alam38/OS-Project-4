@@ -77,7 +77,7 @@ void setFreeBlocks(int f, int bytes) {
 	}
 
 	buffer[2] = -1; 
-	writeBlock(f, x + 1, buffer);
+	writeBlock(f, x, buffer);
 }
 
 
@@ -205,18 +205,18 @@ int8_t findNextInode() {
 	return previousIndex;
 }
 
-//commenting this out so you can work on your stuff
 
-/*int tfs_closeFile(int FD) {
+int tfs_closeFile(int FD) {
 
-	int8_t *inBuffer = calloc(1, BLOCKSIZE), *outBuffer = calloc(1, BLOCKSIZE);
+	int8_t *inBuffer = calloc(1, BLOCKSIZE), *outBuffer = calloc(1, BLOCKSIZE), *endBuffer = calloc(1, BLOCKSIZE);
 
-	int8_t previousFD;
+	int8_t previousFD, end;
 
-	int flag = 0, x;
+	int flag = 0, x, index;
 
 	for (x = 0; x < numFiles; x++) {
-		if (filetable[x].inodeIndex == FD) {
+		if (fileTable[x].inodeIndex == FD) {
+			index = x;
 			flag = 1;
 		}
 	}
@@ -225,22 +225,78 @@ int8_t findNextInode() {
                 return -9; //the given file descriptor does not point to an open file
         }
 
-	if (fileTable[x].open == 0) {
+	if (fileTable[index].open == 0) {
 		return -11; //the file is not open
 	}
 
 	readBlock(mountedFS, FD, (void *)inBuffer);
 
-	previousFD = findPreviousInodeFD();
+	previousFD = findPreviousInodeFD(FD);
 	readBlock(mountedFS, previousFD, (void *)outBuffer);
 	outBuffer[2] = inBuffer[2];
 	writeBlock(mountedFS, previousFD, (void *)outBuffer);
 
-	
+        inBuffer[0] = FREEBLOCK;
+	inBuffer[2] = inBuffer[6]; //this makes the inode point to its data extents which will turn into free blocks
+	cleanFileExtents(inBuffer);
 
+	end = freeBlocksTailFD();
+	readBlock(mountedFS, end, (void *)endBuffer);
+	endBuffer[2] = FD;
+
+	fileTable[index].inodeIndex = 0;
+	memset(fileTable[index].name, 0, 9);
+	fileTable[index].open = 0;
+	fileTable[index].size = 0;
 
 	numFiles--;
-}*/
+
+	return 1;
+}
+
+int freeBlocksTailFD() {
+
+        int8_t *outBuffer = calloc(1, BLOCKSIZE);
+	int8_t address, previous;
+
+	readBlock(mountedFS, 0, (void *)outBuffer);
+
+	address = outBuffer[4];
+	previous = address;
+
+	while (address != -1) {
+		previous = address;
+		readBlock(mountedFS, address, (void *)outBuffer);
+		address = outBuffer[2];
+	}
+
+	return previous;
+}
+
+void cleanFileExtents(int8_t *buffer) {
+
+	int8_t *outBuffer = calloc(1, BLOCKSIZE);
+
+	int8_t size, nextAddress;
+
+	int x, y;
+
+        size = buffer[4];
+        nextAddress = buffer[6];
+
+        for (x = 0; x < (size/BLOCKSIZE); x++) {
+                readBlock(mountedFS, nextAddress, outBuffer);
+                outBuffer[0] = FREEBLOCK;
+		
+		for (y = 0; y < (BLOCKSIZE - 4); y++) {
+			outBuffer[y] = 0;
+		}
+
+		nextAddress = outBuffer[6];
+        }
+
+
+}
 
 int8_t findPreviousInodeFD(int FD) {
 
